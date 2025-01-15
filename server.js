@@ -1,5 +1,5 @@
 import express from "express";
-import multer from "multer";
+import formidable from "formidable";
 import sharp from "sharp";
 import ffmpeg from "fluent-ffmpeg";
 import fs from "fs/promises";
@@ -36,7 +36,7 @@ const users = [
 
 // Middleware
 const corsOptions = {
-  origin: "http://54.66.53.54:8080", // Frontend origin
+  origin: "http://54.66.53.54:8080",
   methods: "GET,POST,PUT,DELETE",
   allowedHeaders: "Content-Type,Authorization",
 };
@@ -48,49 +48,6 @@ app.use(express.static("public"));
 await fs.mkdir("uploads", { recursive: true });
 await fs.mkdir("processed", { recursive: true });
 
-const storage = multer.diskStorage({
-  destination: "uploads/",
-  filename: (req, file, cb) => {
-    cb(null, `${Date.now()}${path.extname(file.originalname)}`);
-  },
-});
-
-const uploadMiddleware = (req, res, next) => {
-  const upload = multer({
-    storage: multer.diskStorage({
-      destination: "uploads/",
-      filename: (req, file, cb) => {
-        cb(null, `${Date.now()}${path.extname(file.originalname)}`);
-      },
-    }),
-    limits: { fileSize: 20 * 1024 * 1024 },
-    fileFilter: (req, file, cb) => {
-      const allowedTypes = [
-        "image/jpeg",
-        "image/png",
-        "video/mp4",
-        "video/quicktime",
-      ];
-      if (allowedTypes.includes(file.mimetype)) cb(null, true);
-      else cb(new Error("Invalid file type"));
-    },
-  }).single('file');
-
-  upload(req, res, (err) => {
-    if (err instanceof multer.MulterError) {
-      // A Multer error occurred during upload
-      console.error('Multer error:', err);
-      return res.status(400).json({ error: err.message });
-    } else if (err) {
-      // An unknown error occurred
-      console.error('Unknown error:', err);
-      return res.status(500).json({ error: err.message });
-    }
-    // Upload successful, proceed to next middleware
-    next();
-  });
-};
-
 // Authentication middleware
 const authenticateToken = (req, res, next) => {
   const token = req.headers.authorization?.split(" ")[1];
@@ -101,6 +58,36 @@ const authenticateToken = (req, res, next) => {
     req.user = user;
     next();
   });
+};
+
+// File upload middleware using formidable
+const handleFileUpload = async (req, res, next) => {
+  const form = formidable({
+    uploadDir: "uploads",
+    keepExtensions: true,
+    maxFileSize: 20 * 1024 * 1024, // 20MB
+    filter: ({ mimetype }) => {
+      const allowedTypes = [
+        "image/jpeg",
+        "image/png",
+        "video/mp4",
+        "video/quicktime",
+      ];
+      return allowedTypes.includes(mimetype);
+    },
+  });
+
+  try {
+    const [fields, files] = await form.parse(req);
+    if (!files.file || !files.file[0]) {
+      throw new Error("No file uploaded");
+    }
+    req.file = files.file[0];
+    req.fields = fields;
+    next();
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 };
 
 app.post("/api/register", async (req, res) => {
@@ -154,16 +141,13 @@ app.post("/api/login", async (req, res) => {
 app.post(
   "/api/process-image",
   authenticateToken,
-  uploadMiddleware,
+  handleFileUpload,
   async (req, res) => {
     try {
       console.log("File received on server:", req.file);
-      const { brightness = 1, sharpness = 1, contrast = 1.5 } = req.query;
-
-      if (!req.file) {
-        console.error("No file uploaded");
-        return res.status(400).json({ error: "No file uploaded" });
-      }
+      const brightness = req.fields.brightness?.[0] || 1;
+      const sharpness = req.fields.sharpness?.[0] || 1;
+      const contrast = req.fields.contrast?.[0] || 1.5;
 
       let processedImageBuffer;
       try {
@@ -171,7 +155,7 @@ app.post(
         const sharpnessValue = parseFloat(sharpness);
         const contrastValue = parseFloat(contrast);
 
-        const image = sharp(req.file.path)
+        const image = sharp(req.file.filepath)
           .grayscale()
           .modulate({ brightness: brightnessValue })
           .sharpen(sharpnessValue)
@@ -186,9 +170,10 @@ app.post(
       res.set("Content-Type", "image/jpeg");
       res.send(processedImageBuffer);
 
-      if (req.file?.path) {
+      // Cleanup
+      if (req.file?.filepath) {
         try {
-          await fs.unlink(req.file.path);
+          await fs.unlink(req.file.filepath);
           console.log("File deleted successfully");
         } catch (deleteError) {
           console.error("Error deleting file:", deleteError);
@@ -196,9 +181,9 @@ app.post(
       }
     } catch (error) {
       console.error("Error processing image:", error);
-      if (req.file?.path) {
+      if (req.file?.filepath) {
         try {
-          await fs.unlink(req.file.path);
+          await fs.unlink(req.file.filepath);
         } catch (deleteError) {
           console.error(
             "Error deleting file during error handling:",
@@ -214,14 +199,14 @@ app.post(
 app.post(
   "/api/process-video",
   authenticateToken,
-  uploadMiddleware,
+  handleFileUpload,
   async (req, res) => {
     const outputPath = path.join("processed", `${Date.now()}.mp4`);
 
     try {
       await fs.mkdir("processed", { recursive: true });
 
-      ffmpeg(req.file.path)
+      ffmpeg(req.file.filepath)
         .videoFilter("colorchannelmixer=.3:.4:.3:0:.3:.4:.3:0:.3:.4:.3")
         .outputOptions([
           "-c:v libx264",
@@ -231,12 +216,12 @@ app.post(
         ])
         .on("end", async () => {
           res.download(outputPath, async () => {
-            await fs.unlink(req.file.path);
+            await fs.unlink(req.file.filepath);
             await fs.unlink(outputPath);
           });
         })
         .on("error", async (err) => {
-          await fs.unlink(req.file.path).catch(() => {});
+          await fs.unlink(req.file.filepath).catch(() => {});
           res.status(500).json({ error: err.message });
         })
         .save(outputPath);

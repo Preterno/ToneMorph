@@ -24,16 +24,19 @@ const ImageProcessor = ({ initialFile }) => {
   useEffect(() => {
     if (initialFile) {
       console.log("Initial file received:", initialFile);
+      // Clean up old URLs
       if (originalFile) URL.revokeObjectURL(originalFile);
       if (processedFile) URL.revokeObjectURL(processedFile);
 
-      const objectUrl = URL.createObjectURL(initialFile);
-      console.log("Created Object URL for initial file:", objectUrl);
-      setOriginalFile(objectUrl);
+      // Create new URL for initial file
+      const newObjectUrl = URL.createObjectURL(initialFile);
+      console.log("Created Object URL for initial file:", newObjectUrl);
+      setOriginalFile(newObjectUrl);
       setProcessedFile(null);
     }
 
     return () => {
+      // Cleanup on unmount
       if (originalFile) URL.revokeObjectURL(originalFile);
       if (processedFile) URL.revokeObjectURL(processedFile);
     };
@@ -45,7 +48,7 @@ const ImageProcessor = ({ initialFile }) => {
       return;
     }
 
-    console.log(initialFile);
+    console.log("Processing file:", initialFile);
     setIsProcessing(true);
     const formData = new FormData();
     formData.append("file", initialFile);
@@ -67,13 +70,17 @@ const ImageProcessor = ({ initialFile }) => {
       );
 
       console.log("Response received from server:", response);
+
+      // Clean up old processed file URL if it exists
       if (processedFile) {
         URL.revokeObjectURL(processedFile);
       }
 
+      // Create new URL for processed file
       const blob = response.data;
-      console.log("Processed file URL:", objectUrl);
-      setProcessedFile(URL.createObjectURL(blob));
+      const newProcessedUrl = URL.createObjectURL(blob);
+      console.log("Processed file URL:", newProcessedUrl);
+      setProcessedFile(newProcessedUrl);
     } catch (error) {
       console.error("Error processing file:", error);
       showToast("Error processing image. Please try again.", { type: "error" });
