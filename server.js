@@ -136,9 +136,11 @@ app.post(
   upload.single("file"),
   async (req, res) => {
     try {
+      console.log("File received on server:", req.file);
       const { brightness = 1, sharpness = 1, contrast = 1.5 } = req.query;
 
       if (!req.file) {
+        console.error("No file uploaded");
         return res.status(400).json({ error: "No file uploaded" });
       }
 

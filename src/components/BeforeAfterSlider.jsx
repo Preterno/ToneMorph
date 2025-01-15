@@ -35,7 +35,7 @@ const BeforeAfterSlider = ({ beforeImage, afterImage }) => {
   }, []);
 
   if (!afterImage && beforeImage) {
-    console.log("here");
+    console.log("Displaying only the original image:", beforeImage);
     return (
       <div className="relative w-full h-[500px] overflow-hidden">
         <img
@@ -48,6 +48,7 @@ const BeforeAfterSlider = ({ beforeImage, afterImage }) => {
   }
 
   if (!beforeImage) {
+    console.log("No images available for preview.");
     return (
       <div className="w-full h-[500px] bg-gray-100 flex items-center justify-center">
         <p className="text-gray-500">Please upload an image to start</p>

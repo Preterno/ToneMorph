@@ -23,10 +23,12 @@ const ImageProcessor = ({ initialFile }) => {
 
   useEffect(() => {
     if (initialFile) {
+      console.log("Initial file received:", initialFile);
       if (originalFile) URL.revokeObjectURL(originalFile);
       if (processedFile) URL.revokeObjectURL(processedFile);
 
       const objectUrl = URL.createObjectURL(initialFile);
+      console.log("Created Object URL for initial file:", objectUrl);
       setOriginalFile(objectUrl);
       setProcessedFile(null);
     }
@@ -38,12 +40,17 @@ const ImageProcessor = ({ initialFile }) => {
   }, [initialFile]);
 
   const processImage = async () => {
-    if (!initialFile) return;
+    if (!initialFile) {
+      console.log("No file selected for processing");
+      return;
+    }
 
+    console.log(initialFile);
     setIsProcessing(true);
     const formData = new FormData();
     formData.append("file", initialFile);
 
+    console.log("FormData to be sent:", formData);
     try {
       const base_url = import.meta.env.VITE_API_BASE_URL;
       const response = await axios.post(
@@ -59,11 +66,13 @@ const ImageProcessor = ({ initialFile }) => {
         }
       );
 
+      console.log("Response received from server:", response);
       if (processedFile) {
         URL.revokeObjectURL(processedFile);
       }
 
       const blob = response.data;
+      console.log("Processed file URL:", objectUrl);
       setProcessedFile(URL.createObjectURL(blob));
     } catch (error) {
       console.error("Error processing file:", error);
