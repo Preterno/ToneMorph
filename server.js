@@ -36,11 +36,11 @@ const users = [
 
 // Middleware
 const corsOptions = {
-  origin: "http://54.66.53.54:8080",
+  origin: "http://52.62.40.136:8080/",
   methods: "GET,POST,PUT,DELETE",
   allowedHeaders: "Content-Type,Authorization",
 };
-app.use(cors(corsOptions));
+app.use(cors());
 
 app.use(express.json());
 app.use(express.static("public"));
