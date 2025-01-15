@@ -55,20 +55,41 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({
-  storage,
-  limits: { fileSize: 20 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = [
-      "image/jpeg",
-      "image/png",
-      "video/mp4",
-      "video/quicktime",
-    ];
-    if (allowedTypes.includes(file.mimetype)) cb(null, true);
-    else cb(new Error("Invalid file type"));
-  },
-});
+const uploadMiddleware = (req, res, next) => {
+  const upload = multer({
+    storage: multer.diskStorage({
+      destination: "uploads/",
+      filename: (req, file, cb) => {
+        cb(null, `${Date.now()}${path.extname(file.originalname)}`);
+      },
+    }),
+    limits: { fileSize: 20 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+      const allowedTypes = [
+        "image/jpeg",
+        "image/png",
+        "video/mp4",
+        "video/quicktime",
+      ];
+      if (allowedTypes.includes(file.mimetype)) cb(null, true);
+      else cb(new Error("Invalid file type"));
+    },
+  }).single('file');
+
+  upload(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      // A Multer error occurred during upload
+      console.error('Multer error:', err);
+      return res.status(400).json({ error: err.message });
+    } else if (err) {
+      // An unknown error occurred
+      console.error('Unknown error:', err);
+      return res.status(500).json({ error: err.message });
+    }
+    // Upload successful, proceed to next middleware
+    next();
+  });
+};
 
 // Authentication middleware
 const authenticateToken = (req, res, next) => {
@@ -133,7 +154,7 @@ app.post("/api/login", async (req, res) => {
 app.post(
   "/api/process-image",
   authenticateToken,
-  upload.single("file"),
+  uploadMiddleware,
   async (req, res) => {
     try {
       console.log("File received on server:", req.file);
@@ -193,7 +214,7 @@ app.post(
 app.post(
   "/api/process-video",
   authenticateToken,
-  upload.single("file"),
+  uploadMiddleware,
   async (req, res) => {
     const outputPath = path.join("processed", `${Date.now()}.mp4`);
 
