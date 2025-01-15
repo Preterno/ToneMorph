@@ -54,7 +54,7 @@ const VideoProcessor = ({ initialFile }) => {
       setProcessedFile(URL.createObjectURL(blob));
     } catch (error) {
       console.error("Error processing video:", error);
-      alert("Error processing video. Please try again.");
+      showToast("Error processing video. Please try again.", { type: "error" });
     } finally {
       setIsProcessing(false);
     }
@@ -86,10 +86,7 @@ const VideoProcessor = ({ initialFile }) => {
             <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-950 border-t-transparent"></div>
           </div>
         ) : (
-          <VideoSlider
-            beforeVideo={originalFile}
-            afterVideo={processedFile}
-          />
+          <VideoSlider beforeVideo={originalFile} afterVideo={processedFile} />
         )}
       </div>
     </div>

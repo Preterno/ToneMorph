@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import showToast from "./Notification";
 import { useAuth } from "../context/AuthContext";
 import BeforeAfterSlider from "./BeforeAfterSlider";
 import axios from "axios";
@@ -66,7 +67,7 @@ const ImageProcessor = ({ initialFile }) => {
       setProcessedFile(URL.createObjectURL(blob));
     } catch (error) {
       console.error("Error processing file:", error);
-      alert("Error processing image. Please try again.");
+      showToast("Error processing image. Please try again.", { type: "error" });
     } finally {
       setIsProcessing(false);
     }
