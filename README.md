@@ -4,7 +4,7 @@ ToneMorph is a versatile media processing application that simplifies the conver
 
 ## Deployment
 
-The application is deployed at: [http://52.62.40.136:8080/](http://52.62.40.136:8080/).
+The application is deployed at: [https://tonemorph.netlify.app/](https://tonemorph.netlify.app/).
 
 ## Features
 
