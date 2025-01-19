@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import VideoSlider from "./VideoSlider";
+import showToast from "./Notification";
 import axios from "axios";
 
 const VideoProcessor = ({ initialFile }) => {
@@ -43,6 +44,10 @@ const VideoProcessor = ({ initialFile }) => {
             "Content-Type": "multipart/form-data",
           },
           responseType: "blob",
+          timeout: 300000,
+          maxContentLength: 20 * 1024 * 1024,
+          maxBodyLength: 20 * 1024 * 1024,
+          withCredentials: true,
         }
       );
 
